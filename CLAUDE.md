@@ -1,212 +1,311 @@
 # VerifyIndia — Project Brief for Claude
 
-## What This Project Is
+> This file is read by Claude Code automatically every time you start a session.
+> It tells Claude exactly what this project is, how it works, and how to help.
 
-VerifyIndia is a B2B supplier verification platform. Indian manufacturers and suppliers (primarily from Gujarat — Surat, Rajkot, Ahmedabad, Vadodara) pay to get listed with verified physical factory audits. Western buyers (Canada/US) use the platform to find trustworthy suppliers without the risk of fraud or misrepresentation.
+---
 
-**Revenue model:** Supplier subscriptions (Bronze/Silver/Gold) + buyer audit reports ($299) + order commissions.
+## What is this project?
 
-**Target audience:**
-- Suppliers: Gujarat-based manufacturers in textiles, diamonds, metals, chemicals, pharma, plastics, engineering
-- Buyers: Canadian and US importers and procurement managers
+VerifyIndia is a B2B supplier verification platform. Western buyers (Canada, US, UK) want to source products from Gujarat, India but cannot trust random listings on IndiaMART or Alibaba. We solve this by physically auditing every supplier before they appear on the platform.
+
+**The business model:**
+- Suppliers pay ₹8,000–₹45,000/year to be listed (Bronze/Silver/Gold tiers)
+- Buyers pay $299–$999 for detailed audit reports
+- We take 2–5% commission on facilitated orders
+
+**The competitive advantage:**
+- Physical factory audits by our India-based field agent
+- GST and legal verification
+- 25-point standardized checklist
+- Canadian company registration gives international credibility
+
+---
 
 ## Tech Stack
 
-- **Framework:** Next.js 16 with App Router and TypeScript (note: this is Next.js 16, not 14 — APIs may differ from training data)
+- **Framework:** Next.js 16 with App Router and TypeScript (note: Next.js 16 — APIs may differ from training data)
 - **Styling:** Tailwind CSS v4 + custom components in `src/components/`
 - **Database:** Supabase (`@supabase/ssr` — NOT `auth-helpers-nextjs`, that package is deprecated)
-- **Payments:** Stripe v21 (`stripe` + `@stripe/stripe-js`) — subscriptions + one-time payments
+- **Payments:** Stripe v21 — subscriptions + one-time payments. Use `getStripe()` not `stripe` directly.
 - **Email:** Resend v6
 - **AI images:** Google Gemini API (`@google/generative-ai`)
-- **Analytics:** PostHog (`posthog-js`)
-- **Hosting:** Vercel
-- **Forms:** `react-hook-form` + `zod` + `@hookform/resolvers`
+- **Hosting:** Vercel (auto-deploys on every `git push` to main)
 
-## Coding Rules — ALWAYS follow these
+---
 
-- Use TypeScript everywhere. **Never use `any` type.** Define interfaces in `src/types/`.
-- Use server components by default. Only add `"use client"` when interactivity is required.
-- All database calls go through Supabase server client (`src/lib/supabase/server.ts`) in server components.
-- All API routes must verify authentication before processing any data.
-- Use Zod for all form validation and API input validation.
-- Use `react-hook-form` for all forms.
-- Never use inline styles — Tailwind CSS classes only.
-- All images use `next/image` component, never bare `<img>` tags.
-- File naming: `kebab-case` for files, `PascalCase` for React components.
-- Never use `console.log` in production code — use proper error handling with typed errors.
-- Never store sensitive data in `localStorage` — use server-side sessions via Supabase.
-- Never hardcode API keys — always use `process.env.VARIABLE_NAME`.
-- `NEXT_PUBLIC_` prefix = safe to use in browser. Without prefix = server only.
-
-## Folder Structure
+## Project Structure
 
 ```
-src/
-  app/                      → All pages and API routes (Next.js App Router)
-    api/                    → Server-side API endpoints
-    (public)/               → Pages visible to everyone (homepage, supplier dir, etc.)
-    (auth)/                 → Auth pages (login, signup, onboarding)
-    (dashboard)/            → Buyer and supplier dashboards (requires login)
-    admin/                  → Admin-only pages (me only)
-    layout.tsx              → Root layout with Navbar + Footer
-    page.tsx                → Homepage (currently default Next.js — needs building)
-    globals.css             → Global styles + Tailwind imports
-
-  components/
-    layout/
-      Navbar.tsx            → ✅ Built — sticky nav with logo, links, CTA buttons
-      Footer.tsx            → ✅ Built — links, tagline, copyright
-    suppliers/
-      SupplierCard.tsx      → ✅ Built — card with photo, name, city, industry, badge, score
-    ui/
-      VerificationBadge.tsx → ✅ Built — Bronze/Silver/Gold badge with score display
-
-  lib/
-    supabase/
-      client.ts             → Browser Supabase client (createBrowserClient from @supabase/ssr)
-      server.ts             → Server Supabase client + admin client (createServerClient)
-    stripe.ts               → Stripe server instance + STRIPE_PLANS config (Bronze/Silver/Gold)
-    utils.ts                → Utility functions (cn, formatters, etc.)
-
-  types/
-    database.ts             → TypeScript interfaces for ALL 8 database tables
+verifyindia/
+├── src/
+│   ├── app/                    Next.js App Router pages
+│   │   ├── api/                API routes (stripe, generate-image)
+│   │   ├── auth/               Login, signup, callback
+│   │   ├── dashboard/          Protected: buyer + supplier dashboards
+│   │   ├── admin/              Protected: admin only
+│   │   ├── suppliers/          Directory + [slug] profile pages
+│   │   ├── industries/[slug]   Industry landing pages
+│   │   ├── how-it-works/       Verification process explainer
+│   │   ├── pricing/            Supplier plans + buyer report pricing
+│   │   ├── contact/            Contact form
+│   │   └── page.tsx            Homepage
+│   ├── components/
+│   │   ├── layout/             Navbar.tsx, Footer.tsx
+│   │   ├── suppliers/          SupplierCard.tsx
+│   │   └── ui/                 VerificationBadge.tsx, ScoreRing
+│   ├── lib/
+│   │   ├── supabase/
+│   │   │   ├── client.ts       Browser client (for "use client" components)
+│   │   │   └── server.ts       Server client (for RSC and API routes)
+│   │   ├── stripe.ts           Stripe — use getStripe() not stripe directly
+│   │   └── utils.ts            cn(), slugify(), formatCurrency() etc
+│   ├── types/
+│   │   └── database.ts         All Supabase table TypeScript interfaces
+│   └── middleware.ts            Route protection (/dashboard, /admin)
+├── supabase/
+│   └── migrations/
+│       └── 001_initial_schema.sql   Full DB schema — run in Supabase SQL Editor
+├── .cursorrules                Cursor AI rules (read automatically)
+├── .env.local                  All secrets (never read or print values)
+└── CLAUDE.md                   This file
 ```
 
-## Stripe Plans (already configured in lib/stripe.ts)
-
-| Plan   | USD/yr | INR/yr | Audits/yr | Key features                          |
-|--------|--------|--------|-----------|---------------------------------------|
-| Bronze | $95    | ₹8,000 | 1         | Basic listing, 10 photos              |
-| Silver | $240   | ₹20,000| 2         | Full profile, analytics, priority     |
-| Gold   | $540   | ₹45,000| 4         | Featured, unlimited photos, buyer info|
-
-## Database Tables (Supabase / PostgreSQL)
-
-All types defined in `src/types/database.ts`:
-
-- **suppliers** — id, name, slug, gst_number, city, state, industry, description, verification_score, verified_at, tier (bronze/silver/gold), status (pending_review→audit_scheduled→audit_complete→verified→suspended), min_order_value, lead_time_days, export_countries[], product_categories[], featured, stripe_customer_id, subscription_id, active_until
-- **supplier_media** — id, supplier_id, type (photo/video/certificate/document), url, caption, sort_order
-- **audits** — id, supplier_id, auditor_id, auditor_name, score, report_url, checklist (jsonb with AuditChecklistItem[]), audit_date, notes
-- **buyers** — id, user_id, company, country, industry, verified_email, full_name, phone
-- **inquiries** — id, buyer_id, supplier_id, message, status (pending/accepted/declined), buyer_response, supplier_response, product_interest, estimated_order_value
-- **certifications** — id, supplier_id, type, issuer, certificate_number, issued_date, expiry_date, doc_url, verified
-- **subscriptions** — id, supplier_id, plan (bronze/silver/gold), stripe_subscription_id, stripe_price_id, status (active/canceled/past_due/trialing), current_period_start, current_period_end, cancel_at_period_end
-- **reviews** — id, buyer_id, supplier_id, rating, title, text, order_value, order_currency, buyer_country, verified_purchase
-- **profiles** — id, user_id (→ auth.users), role (buyer/supplier/admin), full_name, avatar_url, email
-
-## Authentication Roles
-
-- **public:** unauthenticated visitors — can browse the supplier directory
-- **buyer:** registered buyers — can send inquiries, purchase audit reports, save suppliers
-- **supplier:** registered suppliers — can manage their profile, view analytics
-- **admin:** full platform access — me only, managed via Supabase dashboard
+---
 
 ## Environment Variables
 
-All secrets in `.env.local`. Never commit this file. It is in `.gitignore`.
+**Never print these values. Never include them in code suggestions.**
 
+| Variable | Purpose |
+|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | Supabase project URL |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase public key (safe for browser) |
+| SUPABASE_SERVICE_ROLE_KEY | Supabase admin key (server only, bypasses RLS) |
+| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY | Stripe frontend key |
+| STRIPE_SECRET_KEY | Stripe backend key |
+| STRIPE_WEBHOOK_SECRET | Stripe webhook verification |
+| STRIPE_PRICE_BRONZE | Stripe price ID for Bronze plan |
+| STRIPE_PRICE_SILVER | Stripe price ID for Silver plan |
+| STRIPE_PRICE_GOLD | Stripe price ID for Gold plan |
+| GEMINI_API_KEY | Google Gemini for image generation |
+| RESEND_API_KEY | Resend for transactional email |
+| RESEND_FROM_EMAIL | info.tyswebsolution@gmail.com |
+| NEXT_PUBLIC_APP_URL | App URL (localhost:3000 dev, domain in prod) |
+| NEXT_PUBLIC_APP_NAME | VerifyIndia |
+
+---
+
+## Database Schema — Quick Reference
+
+### suppliers table (most important)
+```sql
+id                  UUID (primary key)
+user_id             UUID → auth.users
+slug                TEXT (unique, used in URLs: /suppliers/[slug])
+name                TEXT
+city                TEXT (Surat, Rajkot, Ahmedabad, Vadodara etc)
+industry            TEXT (textiles, metals, diamonds, chemicals etc)
+status              TEXT → 'pending_review' | 'audit_scheduled' | 'audit_complete' | 'verified' | 'suspended'
+tier                TEXT → 'bronze' | 'silver' | 'gold' | NULL
+verification_score  INTEGER 0-100
+export_capability   BOOLEAN
+product_categories  TEXT[]
+stripe_customer_id  TEXT
+subscription_id     TEXT
+active_until        TIMESTAMPTZ
 ```
-NEXT_PUBLIC_SUPABASE_URL        → Supabase project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY   → Supabase anon key (safe for browser)
-SUPABASE_SERVICE_ROLE_KEY       → Admin key — server only, never expose
 
-STRIPE_SECRET_KEY               → sk_test_... (use test keys until ready to launch)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY → pk_test_...
-STRIPE_WEBHOOK_SECRET           → whsec_... (from Stripe CLI or dashboard)
-STRIPE_PRICE_BRONZE             → price_... (create in Stripe dashboard)
-STRIPE_PRICE_SILVER             → price_...
-STRIPE_PRICE_GOLD               → price_...
+### Key relationships
+- profiles.user_id = auth.users.id (one profile per auth user)
+- suppliers.user_id = auth.users.id (one supplier profile per user)
+- buyers.user_id = auth.users.id (one buyer profile per user)
+- inquiries: buyer_id + supplier_id
+- reviews: unique(buyer_id, supplier_id) — one review per pair
 
-RESEND_API_KEY                  → re_...
-RESEND_FROM_EMAIL               → noreply@verifyindia.com
+### Row Level Security
+- suppliers: public can SELECT where status = 'verified'
+- inquiries: buyer sees own rows, supplier sees rows where supplier_id matches
+- reviews: public SELECT, buyer manages own rows
+- All writes require authenticated user
 
-GEMINI_API_KEY                  → From aistudio.google.com
+---
 
-NEXT_PUBLIC_POSTHOG_KEY         → phc_... (from app.posthog.com)
-NEXT_PUBLIC_POSTHOG_HOST        → https://app.posthog.com
+## Common Tasks — How to Do Them
 
-NEXT_PUBLIC_APP_URL             → http://localhost:3000 (change to prod URL on Vercel)
-NEXT_PUBLIC_APP_NAME            → VerifyIndia
+### Fetch a supplier by slug (server component)
+```typescript
+import { createClient } from '@/lib/supabase/server'
+
+const supabase = await createClient()
+const { data: supplier } = await supabase
+  .from('suppliers')
+  .select(`*, supplier_media(*), certifications(*), reviews(*), audits(*)`)
+  .eq('slug', slug)
+  .eq('status', 'verified')
+  .single()
 ```
 
-## Design System
+### Get current user's role
+```typescript
+const supabase = await createClient()
+const { data: { user } } = await supabase.auth.getUser()
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('user_id', user.id)
+  .single()
+// profile.role → 'buyer' | 'supplier' | 'admin'
+```
 
-- **Primary background:** Dark navy `#0A0F1E`
-- **Gold accent:** `#C9A84C`
-- **Font:** Geist Sans (already configured in layout.tsx)
-- **Supplier tiers:** Bronze = `#CD7F32`, Silver = `#C0C0C0`, Gold = `#FFD700`
-- **UI style:** Premium, dark, trust-focused — think Bloomberg or Trustpilot for B2B
+### Search suppliers with filters
+```typescript
+let query = supabase
+  .from('suppliers')
+  .select('*')
+  .eq('status', 'verified')
+
+if (search) query = query.textSearch('search_vector', search)
+if (city) query = query.eq('city', city)
+if (industry) query = query.eq('industry', industry)
+if (tier) query = query.eq('tier', tier)
+
+const { data } = await query.order('verification_score', { ascending: false })
+```
+
+### Send an email with Resend
+```typescript
+import { Resend } from 'resend'
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+await resend.emails.send({
+  from: process.env.RESEND_FROM_EMAIL!,
+  to: recipientEmail,
+  subject: 'New inquiry received',
+  html: `<p>You have a new inquiry from ${buyerName}</p>`
+})
+```
+
+### Use Stripe (always getStripe, never stripe directly)
+```typescript
+import { getStripe } from '@/lib/stripe'
+
+const stripe = getStripe()  // throws clear error if key missing
+const session = await stripe.checkout.sessions.create({ ... })
+```
+
+### Generate image with Gemini
+```typescript
+import { GoogleGenerativeAI } from '@google/generative-ai'
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+```
+
+---
+
+## Frequent Mistakes to Avoid
+
+| Wrong | Right |
+|---|---|
+| `import { createClient } from '@supabase/supabase-js'` | `import { createClient } from '@/lib/supabase/server'` |
+| `import { stripe } from '@/lib/stripe'` | `import { getStripe } from '@/lib/stripe'` |
+| `<img src={url}>` | `<Image src={url} width={} height={} alt={} />` |
+| `style={{ color: 'red' }}` | `className="text-red-500"` |
+| `fetch('/api/...')` in Server Component | Use Supabase directly in Server Component |
+| `process.env.NEXT_PUBLIC_X` in API route | Just `process.env.X` (no NEXT_PUBLIC needed server-side) |
+| Hardcoding supplier IDs | Always use slugs in URLs, IDs internally |
+| `const { data } = supabase.from(...)` | Always await: `const { data } = await supabase.from(...)` |
+| Using `@supabase/auth-helpers-nextjs` | This project uses `@supabase/ssr` only |
+| Assuming Next.js 14 APIs | This is Next.js 16 — check for breaking changes |
+
+---
+
+## What's Already Built (check before creating anything)
+
+Before suggesting to "create" a file, check if it already exists:
+
+### ✅ Pages built
+- `/` — Homepage (hero, search, industry grid, featured suppliers, how it works)
+- `/suppliers` — Directory with city/industry/tier/export filters
+- `/suppliers/[slug]` — Full profile: gallery, 25-point checklist, certifications, reviews, inquiry sidebar
+- `/industries/[slug]` — 6 industry pages (textiles, diamonds, metals, chemicals, pharma, engineering)
+- `/how-it-works` — Full audit process + tier thresholds
+- `/pricing` — 3 supplier plans + 3 buyer audit reports
+- `/contact` — Contact form
+- `/auth/login` — Email + Google OAuth
+- `/auth/signup` — Buyer/supplier role toggle
+- `/dashboard/buyer` — Stats, quick actions, recent activity
+- `/dashboard/supplier` — Stats, profile completeness, pending actions
+- `/admin/verifications` — Verification pipeline queue
+
+### ✅ API routes built
+- `/api/stripe/create-checkout` — Stripe Checkout for plans
+- `/api/stripe/webhook` — Subscription lifecycle
+- `/api/stripe/portal` — Billing management
+- `/api/generate-image` — Gemini image generation + Supabase cache
+
+### ✅ Components built
+- `components/layout/Navbar.tsx` — sticky nav
+- `components/layout/Footer.tsx` — full footer
+- `components/suppliers/SupplierCard.tsx` — supplier grid card
+- `components/ui/VerificationBadge.tsx` — Bronze/Silver/Gold badge
+- `components/ui/VerificationBadge.tsx` — ScoreRing SVG component
+
+### ✅ Infrastructure
+- `src/middleware.ts` — auth protection for /dashboard and /admin
+- `src/lib/supabase/client.ts` — browser Supabase client
+- `src/lib/supabase/server.ts` — server Supabase client (resilient to missing env vars)
+- `src/lib/stripe.ts` — lazy Stripe init via getStripe()
+- `src/lib/utils.ts` — cn(), formatCurrency(), GUJARAT_CITIES, INDUSTRIES constants
+- `src/types/database.ts` — TypeScript interfaces for all 8 tables
+- `supabase/migrations/001_initial_schema.sql` — full DB schema + RLS
+
+---
 
 ## Current Build Status
 
-### Foundation
+### Done
 - [x] Project initialized (Next.js 16 + TypeScript + Tailwind v4)
 - [x] All npm packages installed
-- [x] Supabase client/server setup (`src/lib/supabase/`)
-- [x] Stripe config with Bronze/Silver/Gold plans (`src/lib/stripe.ts`)
-- [x] TypeScript database types for all tables (`src/types/database.ts`)
-- [x] Auth middleware (`src/middleware.ts`) — protects /dashboard and /admin
-- [x] Security headers in `next.config.ts` (HSTS, CSP, X-Frame-Options)
-- [x] .env.local file created — **NEEDS REAL API KEYS FILLED IN**
-- [ ] Supabase database tables created — run `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor
+- [x] Supabase client/server setup
+- [x] Stripe lazy initialization (works without keys during build)
+- [x] All pages built (see list above)
+- [x] Auth flow (login/signup/callback)
+- [x] Buyer + Supplier dashboards
+- [x] Admin verification queue
+- [x] Stripe API routes (checkout/webhook/portal)
+- [x] Gemini image generation API
+- [x] Security headers (HSTS, CSP, X-Frame-Options)
+- [x] SEO (sitemap.xml, robots.txt, JSON-LD, metadata)
+- [x] Deployed to Vercel (auto-deploys on git push)
+- [x] GitHub: infotyswebsolution-netizen/verify-business-india
 
-### Components
-- [x] Navbar — sticky with dropdown nav and auth buttons
-- [x] Footer — full links + Canada/India contact info
-- [x] SupplierCard — photo, name, city, badge, score, rating
-- [x] VerificationBadge — Bronze/Silver/Gold with optional score
-- [x] ScoreRing — SVG circular progress for verification score (1–100)
+### Needs to be done
+- [ ] Add Supabase keys to Vercel environment variables
+- [ ] Run `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor
+- [ ] Create Supabase Storage buckets: supplier-media, audit-reports, generated-images
+- [ ] Add Stripe keys to Vercel + create 3 products (Bronze/Silver/Gold)
+- [ ] Set NEXT_PUBLIC_APP_URL to production Vercel domain
+- [ ] Onboard first 20 Gujarat suppliers manually
 
-### Public Pages
-- [x] Homepage (`/`) — hero search, industry grid, featured suppliers, how it works, trust section
-- [x] Supplier Directory (`/suppliers`) — filterable by city/industry/tier/min-order/export
-- [x] Supplier Profile (`/suppliers/[slug]`) — gallery, 25-point audit checklist, certifications, reviews, inquiry + audit report sidebar
-- [x] Industry Pages (`/industries/[slug]`) — textiles, diamonds, metals, chemicals, pharmaceuticals, engineering
-- [x] How It Works (`/how-it-works`) — 4-step process + 25-point checklist breakdown + tier thresholds
-- [x] Pricing (`/pricing`) — 3 supplier plans + 3 buyer audit reports
-- [x] Contact (`/contact`) — form with role selector + contact details
+---
 
-### Auth
-- [x] Login (`/auth/login`) — email/password + Google OAuth
-- [x] Signup (`/auth/signup`) — buyer/supplier role toggle + company field
-- [x] Callback (`/auth/callback`) — Supabase OAuth redirect handler
+## How to Help Best
 
-### Dashboards
-- [x] Dashboard router (`/dashboard`) — redirects to /buyer or /supplier based on role
-- [x] Buyer Dashboard (`/dashboard/buyer`) — stats, quick actions, recent activity
-- [x] Supplier Dashboard (`/dashboard/supplier`) — stats, profile completeness, pending actions
+1. **Be specific about files** — always tell the exact file path
+2. **Show complete code** — never show partial snippets with "// rest of code here"
+3. **One thing at a time** — complete one task fully before moving to the next
+4. **Explain breaking changes** — if changing something that affects other files, say which ones
+5. **Check what exists first** — look at the "What's Already Built" section before creating files
 
-### API Routes
-- [x] Stripe Checkout (`/api/stripe/create-checkout`) — creates Checkout session for Bronze/Silver/Gold
-- [x] Stripe Webhook (`/api/stripe/webhook`) — handles subscription lifecycle
-- [x] Stripe Portal (`/api/stripe/portal`) — Customer Portal for billing management
-- [x] Image Generation (`/api/generate-image`) — Gemini API + Supabase Storage cache
+---
 
-### Admin
-- [x] Verification Queue (`/admin/verifications`) — pipeline view with assign/upload/approve/suspend
+## Contact & Context
 
-### SEO
-- [x] Sitemap (`/sitemap.xml`) — auto-generated for all routes
-- [x] Robots (`/robots.txt`) — blocks /dashboard, /admin, /api
-- [x] JSON-LD structured data on supplier profile pages
-- [x] Proper metadata (title, description, OG tags) on all pages
-
-### Next Steps to Go Live
-1. Fill in `.env.local` with real Supabase, Stripe, Resend, Gemini keys
-2. Run `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor
-3. Create 3 Stripe products (Bronze $95, Silver $240, Gold $540) — add price IDs to `.env.local`
-4. Create Supabase Storage buckets: `supplier-media` (public), `audit-reports` (private), `generated-images` (public)
-5. Deploy to Vercel: `npx vercel` from this folder
-6. Onboard first 20 suppliers manually from your Gujarat network
-
-## DO NOT do these things
-
-- **Never delete existing working code** to add new features — always extend it
-- **Never use `any` type** — always define proper TypeScript interfaces
-- **Never use `@supabase/auth-helpers-nextjs`** — this project uses `@supabase/ssr`
-- **Never use `console.log`** in production code
-- **Never store sensitive data in localStorage** — use Supabase server sessions
-- **Never skip Zod validation** on API routes
-- **Never commit `.env.local`** to git
-- **Never use bare `<img>` tags** — always `next/image`
-- **Never assume Next.js 14 APIs** — this is Next.js 16, check for breaking changes
+- Git email: info.tyswebsolution@gmail.com
+- Git name: TYS Web Solution
+- Platform: Canada-based operation targeting Gujarat suppliers
+- Primary buyer market: Canada, USA, UK
+- Supplier geography: Surat, Rajkot, Ahmedabad, Vadodara (Gujarat, India)
+- Key industries: Textiles, Diamonds/Gems, Metals & Welding, Chemicals, Pharmaceuticals
+- Field auditor: Based in Gujarat, conducts physical factory visits

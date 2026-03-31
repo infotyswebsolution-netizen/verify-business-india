@@ -1,0 +1,154 @@
+# VerifyIndia — .cursorrules
+
+## Project Overview
+You are building VerifyIndia: a B2B supplier verification platform that connects Western buyers (Canada/US) with verified Gujarat, India manufacturers. Every supplier on this platform has been physically audited before appearing in search results.
+
+## Tech Stack
+- Next.js 16 App Router (TypeScript only — no JavaScript files ever)
+- Tailwind CSS v4 + custom components in src/components/
+- Supabase: PostgreSQL database + Auth + Storage + Row Level Security (@supabase/ssr — NOT auth-helpers-nextjs)
+- Stripe v21: supplier subscriptions (Bronze/Silver/Gold) + one-time buyer audit payments
+- Resend: all transactional emails
+- Google Gemini API: AI image generation for supplier photos and banners
+- Vercel: deployment and hosting
+
+## Architecture Rules — ALWAYS follow these
+
+### Server vs Client Components
+- Default to Server Components for everything
+- Add "use client" ONLY when you need: useState, useEffect, event handlers, browser APIs
+- Data fetching always happens in Server Components using the Supabase server client
+- Never fetch data in Client Components unless it's user-triggered (form submit, button click)
+
+### Supabase Usage
+- Server Components and API routes: import from @/lib/supabase/server
+- Client Components: import from @/lib/supabase/client
+- NEVER use the service role key in any client-side code
+- ALWAYS check auth before any database write operation
+- ALWAYS use parameterized queries (Supabase does this — never concatenate raw SQL)
+
+### API Routes
+Every single API route must follow this exact pattern:
+```typescript
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Auth check
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // 2. Input validation
+    const body = await request.json()
+    const schema = z.object({ field: z.string().min(1) })
+    const parsed = schema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+    // 3. Business logic
+    const { data, error } = await supabase.from('table').insert(parsed.data).select().single()
+    if (error) throw error
+
+    // 4. Success response
+    return NextResponse.json({ data }, { status: 201 })
+
+  } catch (error) {
+    console.error('[API_ROUTE_NAME]', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+```
+
+### Forms
+- ALL forms use react-hook-form + zodResolver
+- NEVER use uncontrolled inputs with FormData
+- NEVER use HTML form action attribute
+- Validate on client AND server (same Zod schema reused for both)
+
+### TypeScript
+- No `any` types ever — use `unknown` and narrow it
+- Define explicit return types on all functions
+- Use the types from @/types/database.ts for all DB records
+- Prefer interfaces over type aliases for object shapes
+
+### File Naming
+- Pages: app/route/page.tsx
+- Layouts: app/route/layout.tsx
+- API routes: app/api/feature/route.ts
+- Components: components/category/ComponentName.tsx (PascalCase)
+- Utilities: lib/name.ts (camelCase)
+- Types: types/name.ts
+
+### Styling
+- Tailwind only — no inline styles, no CSS modules, no styled-components
+- Use cn() from @/lib/utils for conditional classes
+- Mobile-first responsive design (sm: md: lg: prefixes)
+- Color system: gold (#C9A84C), ink (#0D0D0D), paper (#FAF8F3), trust (#1A4D3E)
+- Never hardcode hex values in components — use Tailwind theme tokens
+
+### Images
+- Always use next/image, never <img>
+- Always provide width and height
+- Use priority prop on above-fold images only
+- Supplier photos stored in Supabase Storage, accessed via public URL
+
+### Error Handling
+- Every async operation needs try/catch
+- Show toast notifications for user-facing errors
+- Log errors with console.error('[CONTEXT]', error) — include context in brackets
+- Never show raw error messages to users
+
+### Loading States
+- Use React Suspense with fallback skeleton components
+- Loading skeletons match the layout of the real content
+- Never show a spinner alone — always skeleton that matches the shape
+
+### Performance
+- Fetch data as close to where it's used as possible
+- Use Next.js cache() for repeated identical fetches in the same request
+- Images: use appropriate sizes prop, never load desktop-size images on mobile
+
+## Database Tables Reference
+- profiles: id, user_id, role ('buyer'|'supplier'|'admin'), full_name, avatar_url, email
+- suppliers: id, user_id, slug, name, city, state, industry, verification_score, verified_at, tier (bronze/silver/gold), status, min_order_value, export_capability, product_categories[], stripe_customer_id, active_until
+- supplier_media: id, supplier_id, type (photo/video/certificate/document), url, caption, sort_order
+- certifications: id, supplier_id, type, issuer, expiry_date, doc_url, verified
+- audits: id, supplier_id, auditor_name, score, checklist (JSONB), report_url, audit_date
+- buyers: id, user_id, company, country, industry, verified_email
+- inquiries: id, buyer_id, supplier_id, message, status (pending/accepted/declined), estimated_order_value
+- reviews: id, buyer_id, supplier_id, rating, title, text, order_value, verified_purchase
+- subscriptions: id, supplier_id, plan, stripe_subscription_id, status, current_period_end
+
+## Current Verification Tiers
+- bronze: score 60-74, basic audit, 1 audit/year, ₹8,000/yr
+- silver: score 75-89, full audit, 2 audits/year, ₹20,000/yr
+- gold: score 90-100, premium audit, 4 audits/year, ₹45,000/yr
+
+## Business Logic Rules
+- Only suppliers with status = 'verified' appear in public search
+- Buyers must be logged in to send inquiries
+- One review per buyer per supplier (enforced by DB unique constraint)
+- Stripe webhooks update tier and active_until in suppliers table
+- File uploads: only jpg/png/webp/pdf, max 10MB, UUID filenames
+
+## Frequent Mistakes to Avoid
+| Wrong | Right |
+|---|---|
+| `import { createClient } from '@supabase/supabase-js'` | `import { createClient } from '@/lib/supabase/server'` |
+| `<img src={url}>` | `<Image src={url} width={} height={} alt={} />` |
+| `style={{ color: 'red' }}` | `className="text-red-500"` |
+| `fetch('/api/...')` in Server Component | Use Supabase directly in Server Component |
+| `import { stripe } from '@/lib/stripe'` | `import { getStripe } from '@/lib/stripe'` |
+| `const { data } = supabase.from(...)` | Always await: `const { data } = await supabase.from(...)` |
+| Hardcoding supplier IDs | Always use slugs in URLs, IDs internally |
+| Using `@supabase/auth-helpers-nextjs` | This project uses `@supabase/ssr` only |
+
+## When asked to build something, always:
+1. Create the file with full TypeScript types
+2. Handle loading states with Suspense/skeleton
+3. Handle error states gracefully
+4. Make it fully responsive (mobile-first)
+5. Add SEO metadata if it's a page (generateMetadata)
+6. Follow all the rules above without being reminded
