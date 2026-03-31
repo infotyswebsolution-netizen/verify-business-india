@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 
@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get("stripe-signature")!;
 
   let event: Stripe.Event;
+  const stripe = getStripe();
 
   try {
     event = stripe.webhooks.constructEvent(
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
         if (!userId || !plan) break;
 
-        const sub = await stripe.subscriptions.retrieve(
+        const sub = await getStripe().subscriptions.retrieve(
           session.subscription as string
         ) as Stripe.Subscription;
 

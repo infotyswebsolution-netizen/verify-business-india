@@ -1,14 +1,33 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-  typescript: true,
+// Lazy initialization — only throws at request time, not at build time
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key || key.startsWith("sk_test_your")) {
+      throw new Error("Stripe is not configured. Add STRIPE_SECRET_KEY to environment variables.");
+    }
+    _stripe = new Stripe(key, {
+      apiVersion: "2026-03-25.dahlia",
+      typescript: true,
+    });
+  }
+  return _stripe;
+}
+
+// Keep named export for backwards compatibility
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return getStripe()[prop as keyof Stripe];
+  },
 });
 
 export const STRIPE_PLANS = {
   bronze: {
     name: "Bronze",
-    priceId: process.env.STRIPE_PRICE_BRONZE!,
+    priceId: process.env.STRIPE_PRICE_BRONZE ?? "",
     price: 95,
     currency: "usd",
     inrPrice: 8000,
@@ -23,7 +42,7 @@ export const STRIPE_PLANS = {
   },
   silver: {
     name: "Silver",
-    priceId: process.env.STRIPE_PRICE_SILVER!,
+    priceId: process.env.STRIPE_PRICE_SILVER ?? "",
     price: 240,
     currency: "usd",
     inrPrice: 20000,
@@ -39,7 +58,7 @@ export const STRIPE_PLANS = {
   },
   gold: {
     name: "Gold",
-    priceId: process.env.STRIPE_PRICE_GOLD!,
+    priceId: process.env.STRIPE_PRICE_GOLD ?? "",
     price: 540,
     currency: "usd",
     inrPrice: 45000,
