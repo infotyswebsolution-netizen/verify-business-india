@@ -143,6 +143,13 @@ export interface Review {
   verified_purchase: boolean;
 }
 
+export interface SavedSupplier {
+  id: string;
+  created_at: string;
+  buyer_id: string;
+  supplier_id: string;
+}
+
 export interface Profile {
   id: string;
   created_at: string;

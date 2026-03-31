@@ -225,6 +225,19 @@ create table reviews (
 create index on reviews(supplier_id);
 
 -- ============================================================
+-- SAVED SUPPLIERS TABLE
+-- ============================================================
+create table saved_suppliers (
+  id uuid primary key default uuid_generate_v4(),
+  created_at timestamptz default now(),
+  buyer_id uuid references buyers(id) on delete cascade not null,
+  supplier_id uuid references suppliers(id) on delete cascade not null,
+  unique(buyer_id, supplier_id)
+);
+
+create index on saved_suppliers(buyer_id);
+
+-- ============================================================
 -- AUDIT LOGS TABLE (admin action tracking)
 -- ============================================================
 create table audit_logs (
@@ -262,6 +275,7 @@ alter table inquiries enable row level security;
 alter table certifications enable row level security;
 alter table subscriptions enable row level security;
 alter table reviews enable row level security;
+alter table saved_suppliers enable row level security;
 alter table audit_logs enable row level security;
 
 -- PROFILES
@@ -351,6 +365,20 @@ create policy "reviews_select_public" on reviews
   for select using (true);
 create policy "reviews_insert_buyer" on reviews
   for insert with check (
+    exists(select 1 from buyers where id = buyer_id and user_id = auth.uid())
+  );
+
+-- SAVED SUPPLIERS — buyers manage their own saves
+create policy "saved_suppliers_own_select" on saved_suppliers
+  for select using (
+    exists(select 1 from buyers where id = buyer_id and user_id = auth.uid())
+  );
+create policy "saved_suppliers_own_insert" on saved_suppliers
+  for insert with check (
+    exists(select 1 from buyers where id = buyer_id and user_id = auth.uid())
+  );
+create policy "saved_suppliers_own_delete" on saved_suppliers
+  for delete using (
     exists(select 1 from buyers where id = buyer_id and user_id = auth.uid())
   );
 

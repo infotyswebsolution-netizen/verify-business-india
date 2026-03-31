@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X, ShieldCheck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,12 @@ const NAV_LINKS = [
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [industriesOpen, setIndustriesOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Dashboard and admin have their own layout — no global nav
+  if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur border-b border-paper-dark shadow-sm">
