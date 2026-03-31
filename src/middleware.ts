@@ -66,8 +66,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Auth pages — redirect if already logged in
-  if (pathname.startsWith("/auth") && user) {
+  // Auth pages — redirect logged-in users away, but NOT from callback or update-password
+  const authPassthrough = ["/auth/callback", "/auth/update-password"];
+  if (
+    pathname.startsWith("/auth") &&
+    !authPassthrough.some((p) => pathname.startsWith(p)) &&
+    user
+  ) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
