@@ -22,114 +22,11 @@ import {
 } from "lucide-react";
 import { VerificationBadge, ScoreRing } from "@/components/ui/VerificationBadge";
 import { formatDate } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
-
-// Demo data — replace with Supabase query in production
-const DEMO_SUPPLIER = {
-  id: "1",
-  name: "Shree Textile Mills",
-  slug: "shree-textile-mills",
-  city: "Surat",
-  state: "Gujarat",
-  industry: "Textiles & Fabrics",
-  tier: "gold" as const,
-  verification_score: 92,
-  verified_at: "2024-12-01",
-  export_capability: true,
-  export_countries: ["USA", "Canada", "UK", "Germany", "France", "Australia"],
-  product_categories: ["Synthetic Fabrics", "Sarees", "Dress Material", "Lace Fabric", "Georgette", "Chiffon"],
-  min_order_value: 500,
-  min_order_currency: "USD",
-  lead_time_days: 21,
-  production_volume: "50,000 meters/month",
-  gst_number: "24AABCS1429B1ZC",
-  description: `Shree Textile Mills is a leading manufacturer of premium synthetic fabrics based in Surat, Gujarat — India's textile capital. Established in 1985, we have 38 years of experience supplying high-quality fabrics to buyers across North America, Europe, and Australia.
-
-Our state-of-the-art manufacturing facility spans 25,000 sq ft and employs 120 skilled workers. We operate modern Rapier looms capable of producing 50,000+ meters monthly with consistent quality standards.
-
-We hold ISO 9001:2015 certification and comply with OEKO-TEX Standard 100 for chemical safety in textiles, making us the preferred choice for international buyers with strict compliance requirements.`,
-  website: "https://shreetextilemills.com",
-  whatsapp: "+91-98765-43210",
-  email: "exports@shreetextilemills.com",
-  phone: "+91-261-2345678",
-  featured: true,
-  photos: [
-    { url: null, caption: "Main factory floor" },
-    { url: null, caption: "Weaving department" },
-    { url: null, caption: "Quality control lab" },
-    { url: null, caption: "Finished goods warehouse" },
-    { url: null, caption: "Export packing area" },
-  ],
-  certifications: [
-    { type: "ISO 9001:2015", issuer: "Bureau Veritas", expiry_date: "2026-03-15", verified: true },
-    { type: "GST Verified", issuer: "Government of India", expiry_date: null, verified: true },
-    { type: "Export License", issuer: "DGFT India", expiry_date: "2025-12-31", verified: true },
-    { type: "OEKO-TEX Standard 100", issuer: "OEKO-TEX Association", expiry_date: "2025-09-30", verified: true },
-    { type: "MSME Registered", issuer: "Ministry of MSME", expiry_date: null, verified: true },
-  ],
-  audit_checklist: [
-    { category: "Legal & Compliance", question: "Valid GST registration", status: "pass" },
-    { category: "Legal & Compliance", question: "Export license current", status: "pass" },
-    { category: "Legal & Compliance", question: "Factory license valid", status: "pass" },
-    { category: "Legal & Compliance", question: "Labour compliance up to date", status: "pass" },
-    { category: "Production Capacity", question: "Production volume verified", status: "pass" },
-    { category: "Production Capacity", question: "Machinery list matches claim", status: "pass" },
-    { category: "Production Capacity", question: "Minimum order ability confirmed", status: "pass" },
-    { category: "Quality Systems", question: "Quality control process in place", status: "pass" },
-    { category: "Quality Systems", question: "ISO certification verified", status: "pass" },
-    { category: "Quality Systems", question: "Product testing capabilities", status: "pass" },
-    { category: "Quality Systems", question: "Defect rate under 2%", status: "pass" },
-    { category: "Worker Conditions", question: "Minimum wage compliance", status: "pass" },
-    { category: "Worker Conditions", question: "Safe working environment", status: "pass" },
-    { category: "Worker Conditions", question: "No child labour", status: "pass" },
-    { category: "Worker Conditions", question: "Proper ventilation and fire safety", status: "pass" },
-    { category: "Financial Health", question: "Bank account in business name", status: "pass" },
-    { category: "Financial Health", question: "3 years of filed GST returns", status: "pass" },
-    { category: "Financial Health", question: "Export history documented", status: "pass" },
-    { category: "Infrastructure", question: "Dedicated export packing area", status: "pass" },
-    { category: "Infrastructure", question: "Cold storage/climate control (if needed)", status: "na" },
-    { category: "Infrastructure", question: "Internet & communication access", status: "pass" },
-    { category: "Communication", question: "Responsive to international buyers", status: "pass" },
-    { category: "Communication", question: "English communication capability", status: "partial" },
-    { category: "Sustainability", question: "Wastewater treatment in place", status: "pass" },
-    { category: "Sustainability", question: "Environmental compliance", status: "pass" },
-  ],
-  reviews: [
-    {
-      id: "r1",
-      buyer_country: "Canada",
-      company: "Nova Textiles Inc.",
-      rating: 5,
-      title: "Exceptional quality, reliable delivery",
-      text: "We've sourced from Shree for 3 years. Consistent quality, good communication, and they've never missed a deadline. The verification report gave us confidence to place our first $40K order.",
-      order_value: 45000,
-      created_at: "2024-11-15",
-    },
-    {
-      id: "r2",
-      buyer_country: "USA",
-      company: "Pacific Apparel LLC",
-      rating: 5,
-      title: "Best saree supplier we've found",
-      text: "Tried 4 Indian suppliers before. Shree is the only one with documented quality processes. The OEKO-TEX cert was essential for our US retail customer requirements.",
-      order_value: 28000,
-      created_at: "2024-10-02",
-    },
-    {
-      id: "r3",
-      buyer_country: "UK",
-      company: "Meridian Wholesale",
-      rating: 4,
-      title: "Good product, slight communication lag",
-      text: "Quality is excellent and pricing is competitive. Response time on emails could be faster — took 48 hours sometimes. But the product delivered exactly as sampled.",
-      order_value: 15000,
-      created_at: "2024-08-20",
-    },
-  ],
-};
 
 const STATUS_ICON = {
   pass: <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />,
@@ -138,25 +35,95 @@ const STATUS_ICON = {
   na: <MinusCircle size={16} className="text-gray-300 flex-shrink-0" />,
 };
 
+async function getSupplier(slug: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select(
+      `
+      *,
+      supplier_media(id, url, caption, is_primary, sort_order),
+      certifications(id, type, issuer, expires_at, is_verified),
+      reviews(id, rating, title, body, order_value, buyer_company, buyer_country, created_at),
+      audits(score, checklist, audit_date, notes)
+    `
+    )
+    .eq("slug", slug)
+    .eq("verification_status", "verified")
+    .single();
+
+  if (error || !data) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = data as any;
+
+  return {
+    ...raw,
+    // Field aliases to match JSX expectations
+    status: raw.verification_status,
+    min_order_value: raw.min_order_usd as number | null,
+    min_order_currency: "USD",
+    // Sort photos by sort_order, map to expected shape
+    photos: (
+      (raw.supplier_media as { id: string; url: string; caption: string | null; is_primary: boolean; sort_order: number }[]) ?? []
+    )
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((m) => ({ url: m.url, caption: m.caption ?? "" })),
+    // Map certifications fields
+    certifications: (
+      (raw.certifications as { id: string; type: string; issuer: string | null; expires_at: string | null; is_verified: boolean }[]) ?? []
+    ).map((c) => ({
+      ...c,
+      expiry_date: c.expires_at,
+      verified: c.is_verified,
+    })),
+    // Map reviews fields
+    reviews: (
+      (raw.reviews as { id: string; rating: number; title: string | null; body: string; order_value: number | null; buyer_company: string | null; buyer_country: string | null; created_at: string }[]) ?? []
+    ).map((r) => ({
+      ...r,
+      text: r.body,
+      company: r.buyer_company ?? "Anonymous",
+    })),
+    // Extract audit checklist from first audit record
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    audit_checklist: (raw.audits as any[])?.[0]?.checklist?.items ?? [],
+  };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  if (slug !== DEMO_SUPPLIER.slug) return { title: "Supplier Not Found" };
+  const supplier = await getSupplier(slug);
+
+  if (!supplier) {
+    return { title: "Supplier Not Found" };
+  }
+
   return {
-    title: `${DEMO_SUPPLIER.name} — Verified ${DEMO_SUPPLIER.industry} Supplier in ${DEMO_SUPPLIER.city}`,
-    description: `${DEMO_SUPPLIER.name} is a Gold-verified ${DEMO_SUPPLIER.industry} manufacturer in ${DEMO_SUPPLIER.city}, Gujarat. Verification score: ${DEMO_SUPPLIER.verification_score}/100. Exports to ${DEMO_SUPPLIER.export_countries.slice(0, 3).join(", ")}.`,
+    title: `${supplier.name} — Verified ${supplier.industry} Supplier in ${supplier.city}`,
+    description: `${supplier.name} is a ${supplier.tier ? supplier.tier.charAt(0).toUpperCase() + supplier.tier.slice(1) : "Verified"}-tier ${supplier.industry} manufacturer in ${supplier.city}, Gujarat. Verification score: ${supplier.verification_score}/100. Exports to ${(supplier.export_countries as string[]).slice(0, 3).join(", ")}.`,
   };
 }
 
 export default async function SupplierProfilePage({ params }: PageProps) {
   const { slug } = await params;
-  if (slug !== DEMO_SUPPLIER.slug) notFound();
+  const supplier = await getSupplier(slug);
 
-  const supplier = DEMO_SUPPLIER;
+  if (!supplier) notFound();
+
+  const reviews = supplier.reviews as {
+    id: string; rating: number; title: string | null; text: string;
+    order_value: number | null; company: string; buyer_country: string | null; created_at: string;
+  }[];
+
   const avgRating =
-    supplier.reviews.reduce((sum, r) => sum + r.rating, 0) /
-    supplier.reviews.length;
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : (supplier.avg_rating as number | null) ?? 0;
 
-  const checklistByCategory = supplier.audit_checklist.reduce(
+  const checklistByCategory = (
+    supplier.audit_checklist as { category: string; question: string; status: string }[]
+  ).reduce(
     (acc, item) => {
       if (!acc[item.category]) acc[item.category] = [];
       acc[item.category].push(item);
@@ -165,9 +132,9 @@ export default async function SupplierProfilePage({ params }: PageProps) {
     {} as Record<string, typeof supplier.audit_checklist>
   );
 
-  const passCount = supplier.audit_checklist.filter(
-    (i) => i.status === "pass"
-  ).length;
+  const passCount = (
+    supplier.audit_checklist as { status: string }[]
+  ).filter((i) => i.status === "pass").length;
 
   const isExpired = (date: string | null) => {
     if (!date) return false;
@@ -182,6 +149,12 @@ export default async function SupplierProfilePage({ params }: PageProps) {
     return d > new Date() && d <= threeMonths;
   };
 
+  const certifications = supplier.certifications as {
+    id: string; type: string; issuer: string | null; expiry_date: string | null; verified: boolean;
+  }[];
+
+  const photos = supplier.photos as { url: string | null; caption: string }[];
+
   // JSON-LD structured data
   const jsonLd = {
     "@context": "https://schema.org",
@@ -194,12 +167,16 @@ export default async function SupplierProfilePage({ params }: PageProps) {
       addressRegion: "Gujarat",
       addressCountry: "IN",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: avgRating.toFixed(1),
-      reviewCount: supplier.reviews.length,
-      bestRating: 5,
-    },
+    ...(avgRating > 0 && reviews.length > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: avgRating.toFixed(1),
+            reviewCount: reviews.length,
+            bestRating: 5,
+          },
+        }
+      : {}),
   };
 
   return (
@@ -248,7 +225,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                           {supplier.city}, Gujarat, India
                         </div>
                         <span>·</span>
-                        <span>{supplier.industry}</span>
+                        <span className="capitalize">{supplier.industry}</span>
                         {supplier.export_capability && (
                           <>
                             <span>·</span>
@@ -269,7 +246,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                   </div>
 
                   {/* Reviews summary */}
-                  {supplier.reviews.length > 0 && (
+                  {reviews.length > 0 && (
                     <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
                       <div className="flex">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -288,7 +265,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                         {avgRating.toFixed(1)}
                       </span>
                       <span className="text-sm text-gray-500">
-                        ({supplier.reviews.length} verified buyer reviews)
+                        ({reviews.length} verified buyer review{reviews.length !== 1 ? "s" : ""})
                       </span>
                     </div>
                   )}
@@ -296,45 +273,47 @@ export default async function SupplierProfilePage({ params }: PageProps) {
               </div>
 
               {/* Photo Gallery */}
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-50">
-                  <h2 className="font-bold text-ink text-lg">Factory Photos</h2>
-                </div>
-                <div className="p-5">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {supplier.photos.map((photo, i) => (
-                      <div
-                        key={i}
-                        className={`relative rounded-xl overflow-hidden bg-paper-dark ${
-                          i === 0 ? "col-span-2 row-span-2 h-64" : "h-28"
-                        }`}
-                      >
-                        {photo.url ? (
-                          <Image
-                            src={photo.url}
-                            alt={photo.caption}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                            <Package size={i === 0 ? 40 : 24} className="text-gray-300" />
-                            <span className="text-xs text-gray-400 text-center px-2">
-                              {photo.caption}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+              {photos.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                  <div className="p-5 border-b border-gray-50">
+                    <h2 className="font-bold text-ink text-lg">Factory Photos</h2>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {photos.map((photo, i) => (
+                        <div
+                          key={i}
+                          className={`relative rounded-xl overflow-hidden bg-paper-dark ${
+                            i === 0 ? "col-span-2 row-span-2 h-64" : "h-28"
+                          }`}
+                        >
+                          {photo.url ? (
+                            <Image
+                              src={photo.url}
+                              alt={photo.caption}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                              <Package size={i === 0 ? 40 : 24} className="text-gray-300" />
+                              <span className="text-xs text-gray-400 text-center px-2">
+                                {photo.caption}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* About */}
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h2 className="font-bold text-ink text-lg mb-4">About the Supplier</h2>
                 <div className="text-gray-600 text-sm leading-relaxed space-y-3">
-                  {supplier.description.split("\n\n").map((para, i) => (
+                  {(supplier.description as string ?? "").split("\n\n").map((para, i) => (
                     <p key={i}>{para}</p>
                   ))}
                 </div>
@@ -346,8 +325,9 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                       <span className="text-xs text-gray-500">Min. Order</span>
                     </div>
                     <span className="font-bold text-ink text-sm">
-                      ${supplier.min_order_value?.toLocaleString()}{" "}
-                      {supplier.min_order_currency}
+                      {supplier.min_order_value
+                        ? `$${(supplier.min_order_value as number).toLocaleString()} ${supplier.min_order_currency}`
+                        : "Contact us"}
                     </span>
                   </div>
                   <div className="text-center p-3 bg-paper rounded-xl">
@@ -356,7 +336,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                       <span className="text-xs text-gray-500">Lead Time</span>
                     </div>
                     <span className="font-bold text-ink text-sm">
-                      {supplier.lead_time_days} days
+                      {supplier.lead_time_days ? `${supplier.lead_time_days} days` : "TBD"}
                     </span>
                   </div>
                   <div className="text-center p-3 bg-paper rounded-xl">
@@ -365,7 +345,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                       <span className="text-xs text-gray-500">Volume</span>
                     </div>
                     <span className="font-bold text-ink text-sm text-center leading-tight">
-                      {supplier.production_volume}
+                      {supplier.production_volume ?? "—"}
                     </span>
                   </div>
                   <div className="text-center p-3 bg-paper rounded-xl">
@@ -374,7 +354,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                       <span className="text-xs text-gray-500">Exports To</span>
                     </div>
                     <span className="font-bold text-ink text-sm">
-                      {supplier.export_countries.length} countries
+                      {(supplier.export_countries as string[]).length} countries
                     </span>
                   </div>
                 </div>
@@ -384,7 +364,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h2 className="font-bold text-ink text-lg mb-4">Products & Categories</h2>
                 <div className="flex flex-wrap gap-2">
-                  {supplier.product_categories.map((cat) => (
+                  {(supplier.product_categories as string[]).map((cat) => (
                     <span
                       key={cat}
                       className="bg-paper border border-paper-dark text-gray-700 text-sm px-3 py-1.5 rounded-full"
@@ -393,13 +373,13 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                     </span>
                   ))}
                 </div>
-                {supplier.export_countries.length > 0 && (
+                {(supplier.export_countries as string[]).length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-50">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Export Destinations
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {supplier.export_countries.map((country) => (
+                      {(supplier.export_countries as string[]).map((country) => (
                         <span
                           key={country}
                           className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-1 rounded-full"
@@ -413,180 +393,192 @@ export default async function SupplierProfilePage({ params }: PageProps) {
               </div>
 
               {/* Certifications */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-bold text-ink text-lg mb-4">
-                  Certifications & Licenses
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {supplier.certifications.map((cert) => {
-                    const expired = isExpired(cert.expiry_date);
-                    const expiring = isExpiringSoon(cert.expiry_date);
-                    return (
-                      <div
-                        key={cert.type}
-                        className={`flex items-start gap-3 p-3 rounded-xl border ${
-                          expired
-                            ? "bg-red-50 border-red-100"
-                            : expiring
-                            ? "bg-amber-50 border-amber-100"
-                            : "bg-paper border-paper-dark"
-                        }`}
-                      >
-                        <div className="flex-shrink-0 mt-0.5">
-                          {expired ? (
-                            <AlertCircle size={16} className="text-red-500" />
-                          ) : cert.verified ? (
-                            <CheckCircle2 size={16} className="text-emerald-500" />
-                          ) : (
-                            <MinusCircle size={16} className="text-gray-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-ink">{cert.type}</p>
-                          {cert.issuer && (
-                            <p className="text-xs text-gray-500">{cert.issuer}</p>
-                          )}
-                          {cert.expiry_date && (
-                            <p className={`text-xs mt-0.5 ${expired ? "text-red-600" : expiring ? "text-amber-600" : "text-gray-400"}`}>
-                              <Calendar size={10} className="inline mr-1" />
-                              {expired ? "Expired" : "Expires"}{" "}
-                              {formatDate(cert.expiry_date)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 25-Point Audit Checklist */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-bold text-ink text-lg">
-                    Verification Audit Report
+              {certifications.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                  <h2 className="font-bold text-ink text-lg mb-4">
+                    Certifications & Licenses
                   </h2>
-                  <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                    {passCount}/{supplier.audit_checklist.filter(i => i.status !== "na").length} Passed
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mb-5">
-                  25-point physical factory inspection conducted by our Gujarat-based audit team.
-                </p>
-
-                <div className="space-y-5">
-                  {Object.entries(checklistByCategory).map(([category, items]) => (
-                    <div key={category}>
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                        {category}
-                      </h3>
-                      <div className="space-y-1.5">
-                        {items.map((item, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-3 py-1.5 px-3 rounded-lg hover:bg-paper transition-colors"
-                          >
-                            {STATUS_ICON[item.status as keyof typeof STATUS_ICON]}
-                            <span
-                              className={`text-sm flex-1 ${
-                                item.status === "na" ? "text-gray-400" : "text-gray-700"
-                              }`}
-                            >
-                              {item.question}
-                            </span>
-                            {item.status === "partial" && (
-                              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                                Partial
-                              </span>
-                            )}
-                            {item.status === "na" && (
-                              <span className="text-xs text-gray-400">N/A</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {certifications.map((cert) => {
+                      const expired = isExpired(cert.expiry_date);
+                      const expiring = isExpiringSoon(cert.expiry_date);
+                      return (
+                        <div
+                          key={cert.id}
+                          className={`flex items-start gap-3 p-3 rounded-xl border ${
+                            expired
+                              ? "bg-red-50 border-red-100"
+                              : expiring
+                              ? "bg-amber-50 border-amber-100"
+                              : "bg-paper border-paper-dark"
+                          }`}
+                        >
+                          <div className="flex-shrink-0 mt-0.5">
+                            {expired ? (
+                              <AlertCircle size={16} className="text-red-500" />
+                            ) : cert.verified ? (
+                              <CheckCircle2 size={16} className="text-emerald-500" />
+                            ) : (
+                              <MinusCircle size={16} className="text-gray-400" />
                             )}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-ink">{cert.type}</p>
+                            {cert.issuer && (
+                              <p className="text-xs text-gray-500">{cert.issuer}</p>
+                            )}
+                            {cert.expiry_date && (
+                              <p className={`text-xs mt-0.5 ${expired ? "text-red-600" : expiring ? "text-amber-600" : "text-gray-400"}`}>
+                                <Calendar size={10} className="inline mr-1" />
+                                {expired ? "Expired" : "Expires"}{" "}
+                                {formatDate(cert.expiry_date)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* 25-Point Audit Checklist */}
+              {supplier.audit_checklist.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="font-bold text-ink text-lg">
+                      Verification Audit Report
+                    </h2>
+                    <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                      {passCount}/{(supplier.audit_checklist as { status: string }[]).filter(i => i.status !== "na").length} Passed
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-5">
+                    25-point physical factory inspection conducted by our Gujarat-based audit team.
+                  </p>
+
+                  <div className="space-y-5">
+                    {Object.entries(checklistByCategory).map(([category, items]) => (
+                      <div key={category}>
+                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          {category}
+                        </h3>
+                        <div className="space-y-1.5">
+                          {(items as { category: string; question: string; status: string }[]).map((item, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-3 py-1.5 px-3 rounded-lg hover:bg-paper transition-colors"
+                            >
+                              {STATUS_ICON[item.status as keyof typeof STATUS_ICON]}
+                              <span
+                                className={`text-sm flex-1 ${
+                                  item.status === "na" ? "text-gray-400" : "text-gray-700"
+                                }`}
+                              >
+                                {item.question}
+                              </span>
+                              {item.status === "partial" && (
+                                <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                                  Partial
+                                </span>
+                              )}
+                              {item.status === "na" && (
+                                <span className="text-xs text-gray-400">N/A</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Buyer Reviews */}
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-bold text-ink text-lg">Buyer Reviews</h2>
-                  <div className="flex items-center gap-2">
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          size={14}
-                          className={
-                            s <= Math.round(avgRating)
-                              ? "text-amber-400 fill-amber-400"
-                              : "text-gray-200 fill-gray-200"
-                          }
-                        />
-                      ))}
+                  {reviews.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            size={14}
+                            className={
+                              s <= Math.round(avgRating)
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-gray-200 fill-gray-200"
+                            }
+                          />
+                        ))}
+                      </div>
+                      <span className="font-bold text-ink">
+                        {avgRating.toFixed(1)}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        ({reviews.length})
+                      </span>
                     </div>
-                    <span className="font-bold text-ink">
-                      {avgRating.toFixed(1)}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      ({supplier.reviews.length})
-                    </span>
-                  </div>
+                  )}
                 </div>
 
-                <div className="space-y-5">
-                  {supplier.reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="border-b border-gray-50 last:border-0 pb-5 last:pb-0"
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  size={12}
-                                  className={
-                                    s <= review.rating
-                                      ? "text-amber-400 fill-amber-400"
-                                      : "text-gray-200 fill-gray-200"
-                                  }
-                                />
-                              ))}
+                {reviews.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    No reviews yet. Be the first to review this supplier.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    {reviews.map((review) => (
+                      <div
+                        key={review.id}
+                        className="border-b border-gray-50 last:border-0 pb-5 last:pb-0"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    size={12}
+                                    className={
+                                      s <= review.rating
+                                        ? "text-amber-400 fill-amber-400"
+                                        : "text-gray-200 fill-gray-200"
+                                    }
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {formatDate(review.created_at)}
+                              </span>
                             </div>
-                            <span className="text-xs text-gray-500">
-                              {formatDate(review.created_at)}
-                            </span>
+                            <p className="font-semibold text-sm text-ink">
+                              {review.title}
+                            </p>
                           </div>
-                          <p className="font-semibold text-sm text-ink">
-                            {review.title}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-xs font-bold text-trust">
-                            {review.buyer_country}
-                          </div>
-                          {review.order_value && (
-                            <div className="text-xs text-gray-400">
-                              Order: ${review.order_value.toLocaleString()}
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-xs font-bold text-trust">
+                              {review.buyer_country}
                             </div>
-                          )}
+                            {review.order_value && (
+                              <div className="text-xs text-gray-400">
+                                Order: ${review.order_value.toLocaleString()}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <p className="text-sm text-gray-600 leading-relaxed">
+                          {review.text}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          — {review.company}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {review.text}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        — {review.company}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -649,9 +641,11 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                         Visit Website
                       </a>
                     )}
-                    <p className="text-xs text-gray-400">
-                      GST: {supplier.gst_number}
-                    </p>
+                    {supplier.gst_number && (
+                      <p className="text-xs text-gray-400">
+                        GST: {supplier.gst_number}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -687,11 +681,16 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                   <h3 className="font-bold text-ink text-sm mb-3">Quick Facts</h3>
                   <div className="space-y-2 text-sm">
                     {[
-                      { label: "Min. Order", value: `$${supplier.min_order_value?.toLocaleString()} ${supplier.min_order_currency}` },
-                      { label: "Lead Time", value: `${supplier.lead_time_days} days` },
-                      { label: "Capacity", value: supplier.production_volume || "—" },
-                      { label: "Exports To", value: `${supplier.export_countries.length} countries` },
-                      { label: "Certifications", value: `${supplier.certifications.length} verified` },
+                      {
+                        label: "Min. Order",
+                        value: supplier.min_order_value
+                          ? `$${(supplier.min_order_value as number).toLocaleString()} ${supplier.min_order_currency}`
+                          : "Contact us",
+                      },
+                      { label: "Lead Time", value: supplier.lead_time_days ? `${supplier.lead_time_days} days` : "TBD" },
+                      { label: "Capacity", value: supplier.production_volume ?? "—" },
+                      { label: "Exports To", value: `${(supplier.export_countries as string[]).length} countries` },
+                      { label: "Certifications", value: `${certifications.length} verified` },
                     ].map((fact) => (
                       <div key={fact.label} className="flex justify-between gap-2">
                         <span className="text-gray-500">{fact.label}</span>

@@ -59,36 +59,43 @@ export async function POST(request: NextRequest) {
     }
 
     if (data.role === "buyer") {
-      const { error } = await supabase.from("buyers").upsert({
-        user_id: data.userId,
-        company: data.company,
-        country: data.country,
-        full_name: data.fullName,
-        verified_email: false,
-      });
+      const { error } = await supabase
+        .from("buyers")
+        .upsert(
+          {
+            user_id: data.userId,
+            company: data.company,
+            country: data.country,
+            full_name: data.fullName,
+          },
+          { onConflict: "user_id" }
+        );
       if (error) throw error;
     }
 
     if (data.role === "supplier") {
       const baseSlug = slugify(data.companyName);
-      // Ensure slug is unique by appending random suffix if needed
       const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
 
-      const { error } = await supabase.from("suppliers").upsert({
-        user_id: data.userId,
-        name: data.companyName,
-        slug,
-        city: data.city,
-        state: "Gujarat",
-        industry: data.industry,
-        gst_number: data.gstNumber ?? null,
-        status: "pending_review",
-        tier: null,
-        export_capability: false,
-        product_categories: [],
-        export_countries: [],
-        featured: false,
-      });
+      const { error } = await supabase.from("suppliers").upsert(
+        {
+          user_id: data.userId,
+          name: data.companyName,
+          slug,
+          city: data.city,
+          state: "Gujarat",
+          country: "India",
+          industry: data.industry,
+          gst_number: data.gstNumber ?? null,
+          verification_status: "pending",
+          tier: null,
+          export_capability: false,
+          product_categories: [],
+          export_countries: [],
+          featured: false,
+        },
+        { onConflict: "user_id" }
+      );
       if (error) throw error;
     }
 

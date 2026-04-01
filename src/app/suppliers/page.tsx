@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Search, SlidersHorizontal, Package } from "lucide-react";
 import { SupplierCard } from "@/components/suppliers/SupplierCard";
 import { GUJARAT_CITIES, INDUSTRIES } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Find Verified Suppliers in Gujarat, India",
@@ -22,178 +23,6 @@ interface SuppliersPageProps {
     page?: string;
   }>;
 }
-
-// Seeded demo suppliers for UI development
-const DEMO_SUPPLIERS = [
-  {
-    id: "1",
-    name: "Shree Textile Mills",
-    slug: "shree-textile-mills",
-    city: "Surat",
-    state: "Gujarat",
-    industry: "textiles",
-    tier: "gold" as const,
-    verification_score: 92,
-    verified_at: "2024-12-01",
-    export_capability: true,
-    export_countries: ["USA", "Canada", "UK", "Germany"],
-    product_categories: ["Synthetic Fabrics", "Sarees", "Dress Material", "Lace Fabric"],
-    min_order_value: 500,
-    min_order_currency: "USD",
-    lead_time_days: 21,
-    production_volume: "50,000 meters/month",
-    featured: true,
-    gst_number: "24AABCS1429B1ZC",
-    description: "Leading manufacturer of premium synthetic fabrics since 1985.",
-    created_at: "2024-01-01",
-    updated_at: "2024-12-01",
-    status: "verified" as const,
-    website: null, whatsapp: null, email: null, phone: null,
-    user_id: null, stripe_customer_id: null, subscription_id: null, active_until: null,
-    avg_rating: 4.8,
-    review_count: 18,
-  },
-  {
-    id: "2",
-    name: "Rajkot Precision Engineering",
-    slug: "rajkot-precision-engineering",
-    city: "Rajkot",
-    state: "Gujarat",
-    industry: "metals",
-    tier: "gold" as const,
-    verification_score: 88,
-    verified_at: "2024-11-15",
-    export_capability: true,
-    export_countries: ["USA", "Canada", "Australia"],
-    product_categories: ["CNC Components", "Castings", "Auto Parts", "Welded Assemblies"],
-    min_order_value: 2000,
-    min_order_currency: "USD",
-    lead_time_days: 30,
-    production_volume: "5,000 units/month",
-    featured: false,
-    gst_number: "24AAACR5829B1ZA",
-    description: "ISO 9001 certified precision engineering manufacturer.",
-    created_at: "2024-01-15",
-    updated_at: "2024-11-15",
-    status: "verified" as const,
-    website: null, whatsapp: null, email: null, phone: null,
-    user_id: null, stripe_customer_id: null, subscription_id: null, active_until: null,
-    avg_rating: 4.9,
-    review_count: 12,
-  },
-  {
-    id: "3",
-    name: "Diamond Star Exports",
-    slug: "diamond-star-exports",
-    city: "Surat",
-    state: "Gujarat",
-    industry: "diamonds",
-    tier: "silver" as const,
-    verification_score: 79,
-    verified_at: "2024-10-20",
-    export_capability: true,
-    export_countries: ["USA", "Belgium", "UAE", "Hong Kong"],
-    product_categories: ["Brilliant Cut", "Princess Cut", "Loose Diamonds", "Polished Diamonds"],
-    min_order_value: 10000,
-    min_order_currency: "USD",
-    lead_time_days: 14,
-    production_volume: "10,000 carats/month",
-    featured: false,
-    gst_number: "24AABCD7829B1ZB",
-    description: "Premium diamond polishing and export house since 2001.",
-    created_at: "2024-02-01",
-    updated_at: "2024-10-20",
-    status: "verified" as const,
-    website: null, whatsapp: null, email: null, phone: null,
-    user_id: null, stripe_customer_id: null, subscription_id: null, active_until: null,
-    avg_rating: 4.6,
-    review_count: 7,
-  },
-  {
-    id: "4",
-    name: "Ahmedabad Chem Industries",
-    slug: "ahmedabad-chem-industries",
-    city: "Ahmedabad",
-    state: "Gujarat",
-    industry: "chemicals",
-    tier: "silver" as const,
-    verification_score: 74,
-    verified_at: "2024-09-10",
-    export_capability: true,
-    export_countries: ["USA", "Germany", "Netherlands"],
-    product_categories: ["Specialty Chemicals", "Surfactants", "Dyes & Pigments"],
-    min_order_value: 5000,
-    min_order_currency: "USD",
-    lead_time_days: 45,
-    production_volume: "500 MT/month",
-    featured: false,
-    gst_number: "24AAACA3829B1ZD",
-    description: "Manufacturer of specialty chemicals and surfactants.",
-    created_at: "2024-03-01",
-    updated_at: "2024-09-10",
-    status: "verified" as const,
-    website: null, whatsapp: null, email: null, phone: null,
-    user_id: null, stripe_customer_id: null, subscription_id: null, active_until: null,
-    avg_rating: 4.3,
-    review_count: 5,
-  },
-  {
-    id: "5",
-    name: "Morbi Ceramic World",
-    slug: "morbi-ceramic-world",
-    city: "Morbi",
-    state: "Gujarat",
-    industry: "ceramics",
-    tier: "bronze" as const,
-    verification_score: 61,
-    verified_at: "2024-08-05",
-    export_capability: true,
-    export_countries: ["USA", "Canada", "Middle East"],
-    product_categories: ["Floor Tiles", "Wall Tiles", "Vitrified Tiles", "Sanitary Ware"],
-    min_order_value: 3000,
-    min_order_currency: "USD",
-    lead_time_days: 35,
-    production_volume: "100,000 sq ft/month",
-    featured: false,
-    gst_number: "24AAACM5829B1ZE",
-    description: "World-class ceramic tile manufacturer from Morbi, the ceramic capital.",
-    created_at: "2024-04-01",
-    updated_at: "2024-08-05",
-    status: "verified" as const,
-    website: null, whatsapp: null, email: null, phone: null,
-    user_id: null, stripe_customer_id: null, subscription_id: null, active_until: null,
-    avg_rating: 4.1,
-    review_count: 9,
-  },
-  {
-    id: "6",
-    name: "Vadodara Pharma Labs",
-    slug: "vadodara-pharma-labs",
-    city: "Vadodara",
-    state: "Gujarat",
-    industry: "pharmaceuticals",
-    tier: "gold" as const,
-    verification_score: 95,
-    verified_at: "2024-12-10",
-    export_capability: true,
-    export_countries: ["USA", "Canada", "UK", "Australia", "Germany"],
-    product_categories: ["API Ingredients", "Generic Drugs", "Nutraceuticals", "Herbal Extracts"],
-    min_order_value: 20000,
-    min_order_currency: "USD",
-    lead_time_days: 60,
-    production_volume: "10 MT/month",
-    featured: true,
-    gst_number: "24AAACV4829B1ZF",
-    description: "FDA-approved pharmaceutical manufacturer with WHO-GMP certification.",
-    created_at: "2024-01-20",
-    updated_at: "2024-12-10",
-    status: "verified" as const,
-    website: null, whatsapp: null, email: null, phone: null,
-    user_id: null, stripe_customer_id: null, subscription_id: null, active_until: null,
-    avg_rating: 4.9,
-    review_count: 22,
-  },
-];
 
 const SORT_OPTIONS = [
   { value: "score", label: "Highest Score" },
@@ -215,27 +44,54 @@ export default async function SuppliersPage({
   const params = await searchParams;
   const { q, city, industry, tier, sort = "score" } = params;
 
-  // Filter demo data based on params (in production, this is a Supabase query)
-  let filtered = [...DEMO_SUPPLIERS];
+  const supabase = await createClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
+    .from("suppliers")
+    .select("*, supplier_media(id, url, is_primary)")
+    .eq("verification_status", "verified")
+    .not("published_at", "is", null);
+
   if (q) {
-    const search = q.toLowerCase();
-    filtered = filtered.filter(
-      (s) =>
-        s.name.toLowerCase().includes(search) ||
-        s.industry.toLowerCase().includes(search) ||
-        s.city.toLowerCase().includes(search) ||
-        s.product_categories.some((c) => c.toLowerCase().includes(search))
+    query = query.or(
+      `name.ilike.%${q}%,description.ilike.%${q}%,city.ilike.%${q}%`
     );
   }
-  if (city) filtered = filtered.filter((s) => s.city === city);
-  if (industry) filtered = filtered.filter((s) => s.industry === industry);
-  if (tier) filtered = filtered.filter((s) => s.tier === tier);
+  if (city) query = query.eq("city", city);
+  if (industry) query = query.eq("industry", industry);
+  if (tier) query = query.eq("tier", tier);
 
   if (sort === "score")
-    filtered.sort((a, b) => (b.verification_score ?? 0) - (a.verification_score ?? 0));
+    query = query.order("verification_score", { ascending: false });
   else if (sort === "reviews")
-    filtered.sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0));
-  else if (sort === "az") filtered.sort((a, b) => a.name.localeCompare(b.name));
+    query = query.order("review_count", { ascending: false });
+  else if (sort === "newest")
+    query = query.order("published_at", { ascending: false });
+  else query = query.order("name", { ascending: true });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Suppliers fetch error:", error);
+  }
+
+  // Map DB columns to the shape SupplierCard expects
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const suppliers = ((data as any[]) ?? []).map((s: any) => ({
+    ...s,
+    // Map DB column names → Supplier type fields
+    status: s.verification_status,
+    min_order_value: s.min_order_usd,
+    min_order_currency: "USD",
+    // Derive primary_photo from joined supplier_media
+    primary_photo:
+      (s.supplier_media as { url: string; is_primary: boolean }[])?.find(
+        (m) => m.is_primary
+      )?.url ??
+      (s.supplier_media as { url: string }[])?.[0]?.url ??
+      null,
+  }));
 
   return (
     <div className="bg-paper min-h-screen">
@@ -246,7 +102,7 @@ export default async function SuppliersPage({
             Verified Gujarat Suppliers
           </h1>
           <p className="text-gray-500 text-sm">
-            {filtered.length} verified supplier{filtered.length !== 1 ? "s" : ""} found
+            {suppliers.length} verified supplier{suppliers.length !== 1 ? "s" : ""} found
             {q ? ` for "${q}"` : ""}
             {industry ? ` in ${industry}` : ""}
             {city ? ` · ${city}` : ""}
@@ -400,7 +256,7 @@ export default async function SuppliersPage({
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <span className="text-sm text-gray-600">
                 Showing{" "}
-                <strong className="text-ink">{filtered.length}</strong>{" "}
+                <strong className="text-ink">{suppliers.length}</strong>{" "}
                 verified suppliers
               </span>
               <div className="flex items-center gap-2">
@@ -423,9 +279,10 @@ export default async function SuppliersPage({
               </div>
             </div>
 
-            {filtered.length > 0 ? (
+            {suppliers.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                {filtered.map((supplier) => (
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {suppliers.map((supplier: any) => (
                   <SupplierCard key={supplier.id} supplier={supplier} />
                 ))}
               </div>
