@@ -303,6 +303,7 @@ function SupplierSignupForm({
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
 
   const {
     register,
@@ -350,9 +351,46 @@ function SupplierSignupForm({
           plan,
         }),
       });
+
+      // If a paid plan was selected, redirect straight to Stripe checkout
+      if (plan && ["bronze", "silver", "gold"].includes(plan)) {
+        setStripeLoading(true);
+        try {
+          const res = await fetch("/api/stripe/create-checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan }),
+          });
+          const checkoutData = await res.json();
+          if (res.ok && checkoutData.url) {
+            window.location.href = checkoutData.url;
+            return; // stay on loading state while redirect happens
+          }
+        } catch {
+          // If Stripe fails, fall through to normal success screen
+        }
+        setStripeLoading(false);
+      }
     }
 
     onSuccess(values.email);
+  }
+
+  // Show a full-form loading state while redirecting to Stripe
+  if (stripeLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4">
+          <div className="w-7 h-7 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
+        </div>
+        <h2 className="text-lg font-bold text-ink mb-2">Setting up your subscription…</h2>
+        <p className="text-gray-500 text-sm">
+          You&apos;re being redirected to Stripe to complete payment.
+          <br />
+          Please don&apos;t close this tab.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -553,10 +591,12 @@ function SupplierSignupForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-trust text-white font-bold py-3 rounded-xl hover:bg-trust/90 transition-colors disabled:opacity-60 flex items-center justify-center"
+        className="w-full bg-trust text-white font-bold py-3 rounded-xl hover:bg-trust/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
       >
         {isSubmitting ? (
           <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+        ) : plan && ["bronze", "silver", "gold"].includes(plan) ? (
+          <>Create Account &amp; Pay →</>
         ) : (
           "Create Supplier Account"
         )}

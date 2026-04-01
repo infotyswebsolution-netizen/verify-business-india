@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, X, ArrowRight, ShieldCheck } from "lucide-react";
+import { CheckCircle2, X, ShieldCheck } from "lucide-react";
+import { PricingButton } from "./PricingButtons";
 
 export const metadata: Metadata = {
   title: "Pricing — Supplier Verification Plans",
@@ -215,13 +216,11 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href={`/auth/signup?role=supplier&plan=${plan.id}`}
-                  className={`w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl transition-colors ${plan.ctaClass}`}
-                >
-                  Get {plan.name} Plan
-                  <ArrowRight size={15} />
-                </Link>
+                <PricingButton
+                  plan={plan.id as "bronze" | "silver" | "gold"}
+                  label={`Get ${plan.name} Plan`}
+                  className={plan.ctaClass}
+                />
               </div>
             </div>
           ))}

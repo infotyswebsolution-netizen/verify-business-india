@@ -19,10 +19,17 @@ export async function POST(req: NextRequest) {
 
     const planConfig = STRIPE_PLANS[plan as keyof typeof STRIPE_PLANS];
 
+    if (!planConfig?.priceId) {
+      return NextResponse.json(
+        { error: `Price ID for plan "${plan}" is not configured. Add STRIPE_PRICE_${plan.toUpperCase()} to environment variables.` },
+        { status: 500 }
+      );
+    }
+
     // Get or create Stripe customer
     const { data: supplier } = await supabase
       .from("suppliers")
-      .select("stripe_customer_id, name, email")
+      .select("id, stripe_customer_id, name")
       .eq("user_id", user.id)
       .single();
 
@@ -53,11 +60,13 @@ export async function POST(req: NextRequest) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
       metadata: {
         supplier_user_id: user.id,
+        supplierId: supplier?.id ?? user.id,
         plan,
       },
       subscription_data: {
         metadata: {
           supplier_user_id: user.id,
+          supplierId: supplier?.id ?? user.id,
           plan,
         },
       },
