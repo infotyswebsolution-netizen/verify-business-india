@@ -390,18 +390,31 @@ CREATE POLICY "audit_log_admin" ON audit_log
 
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  raw_role text := LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', '')));
+  safe_role text;
+  disp_name text;
 BEGIN
-  INSERT INTO profiles (user_id, email, full_name, role)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'buyer')
-  )
+  IF raw_role IN ('buyer', 'supplier', 'admin') THEN
+    safe_role := raw_role;
+  ELSE
+    safe_role := 'buyer';
+  END IF;
+
+  disp_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
+  IF disp_name IS NULL THEN
+    disp_name := split_part(COALESCE(NEW.email, ''), '@', 1);
+  END IF;
+  IF disp_name = '' THEN
+    disp_name := 'User';
+  END IF;
+
+  INSERT INTO profiles (user_id, role, full_name, email)
+  VALUES (NEW.id, safe_role, disp_name, NEW.email)
   ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

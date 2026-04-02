@@ -45,7 +45,7 @@ async function getSupplier(slug: string) {
       supplier_media(id, url, caption, is_primary, sort_order),
       certifications(id, type, issuer, expires_at, is_verified),
       reviews(id, rating, title, body, order_value, buyer_company, buyer_country, created_at),
-      audits(score, checklist, audit_date, notes)
+      audits(score, checklist, audited_at, notes)
     `
     )
     .eq("slug", slug)
@@ -85,7 +85,7 @@ async function getSupplier(slug: string) {
       text: r.body,
       company: r.buyer_company ?? "Anonymous",
     })),
-    // Extract audit checklist from first audit record
+    // Extract audit checklist from first audit record (audits use audited_at column)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     audit_checklist: (raw.audits as any[])?.[0]?.checklist?.items ?? [],
   };

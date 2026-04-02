@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   Building2,
   ClipboardCheck,
@@ -54,8 +53,11 @@ function StatCard({
 export default async function AdminOverviewPage() {
   const supabase = await createClient();
 
-  const now = new Date().toISOString();
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  const weekAgo = new Date(nowDate);
+  weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+  const sevenDaysAgo = weekAgo.toISOString();
 
   const [
     totalSuppliersRes,

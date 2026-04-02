@@ -27,7 +27,7 @@ function calcCompletion(supplier: {
   description: string | null;
   product_categories: string[];
   production_volume: string | null;
-  min_order_value: number | null;
+  min_order_usd: number | null;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;
@@ -42,7 +42,7 @@ function calcCompletion(supplier: {
     {
       label: "Production capacity",
       weight: 15,
-      done: !!(supplier.production_volume || (supplier.min_order_value !== null && supplier.min_order_value > 0)),
+      done: !!(supplier.production_volume || (supplier.min_order_usd !== null && supplier.min_order_usd > 0)),
     },
     {
       label: "Contact details",
@@ -86,7 +86,7 @@ export default async function SupplierOverviewPage() {
 
   const { data: supplier } = await supabase
     .from("suppliers")
-    .select("id, name, slug, status, tier, verification_score, description, product_categories, production_volume, min_order_value, phone, whatsapp, email, website")
+    .select("id, name, slug, verification_status, tier, verification_score, description, product_categories, production_volume, min_order_usd, phone, whatsapp, email, website")
     .eq("user_id", user.id)
     .single();
 
@@ -124,9 +124,9 @@ export default async function SupplierOverviewPage() {
   const pendingCount = recentInquiries.filter((i) => i.status === "pending").length;
   const { checks, total: completionPct } = calcCompletion(supplier, mediaCount, certCount);
 
-  const isVerified = supplier.status === "verified";
-  const isPending = ["pending_review", "audit_scheduled", "audit_complete"].includes(supplier.status);
-  const isSuspended = supplier.status === "suspended";
+  const isVerified = supplier.verification_status === "verified";
+  const isPending = ["pending_review", "audit_scheduled", "audit_complete"].includes(supplier.verification_status ?? "");
+  const isSuspended = supplier.verification_status === "suspended";
 
   return (
     <div className="bg-paper min-h-full">
@@ -152,7 +152,7 @@ export default async function SupplierOverviewPage() {
               <p className="font-bold text-amber-800">Profile under review</p>
               <p className="text-sm text-amber-700 mt-0.5">
                 Our team will contact you within 5 business days to schedule an audit.
-                {supplier.status === "audit_scheduled" && " Your audit is scheduled — we'll be in touch with the date."}
+                {supplier.verification_status === "audit_scheduled" && " Your audit is scheduled — we'll be in touch with the date."}
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -200,7 +200,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   // Close sidebar on route change
   const pathname = usePathname();
   useEffect(() => {
-    setMobileOpen(false);
+    startTransition(() => setMobileOpen(false));
   }, [pathname]);
 
   async function handleSignOut() {

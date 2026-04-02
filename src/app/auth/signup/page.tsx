@@ -113,7 +113,8 @@ function BuyerSignupForm({
       email: values.email,
       password: values.password,
       options: {
-        data: { full_name: values.fullName, role: "buyer" },
+        // Do not send key "role" — it can be empty/invalid in metadata and break the DB trigger CHECK.
+        data: { full_name: values.fullName },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard/buyer`,
       },
     });
@@ -322,7 +323,7 @@ function SupplierSignupForm({
       email: values.email,
       password: values.password,
       options: {
-        data: { full_name: values.fullName, role: "supplier" },
+        data: { full_name: values.fullName },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard/supplier`,
       },
     });
@@ -363,6 +364,8 @@ function SupplierSignupForm({
           });
           const checkoutData = await res.json();
           if (res.ok && checkoutData.url) {
+            // External Stripe URL — full navigation (not React state)
+            // eslint-disable-next-line react-hooks/immutability -- assign triggers full page load to Stripe
             window.location.href = checkoutData.url;
             return; // stay on loading state while redirect happens
           }
